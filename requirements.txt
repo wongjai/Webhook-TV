@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+sqlalchemy
+psycopg2-binary  # For PostgreSQL
+pybit
+python-telegram-bot
+jinja2
+python-multipart

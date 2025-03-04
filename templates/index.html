@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Bot Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Trading Bot Dashboard</h1>
+
+    <section>
+        <h2>Current Configuration</h2>
+        <p>Trade Mode: <b>{{ trade_mode }}</b></p>
+        <!-- Display Balances -->
+        <h2>Balances</h2>
+        <ul>
+        {% for coin, balance in balances.items() %}
+            <li>{{ coin }}: {{ balance }}</li>
+        {% else %}
+            <li>No balances found.</li>
+        {% endfor %}
+        </ul>
+
+        <form action="/update_config" method="post">
+            <label for="trade_mode">Trade Mode:</label>
+            <select id="trade_mode" name="trade_mode">
+                <option value="testnet" {% if trade_mode == 'testnet' %}selected{% endif %}>Demo (Testnet)</option>
+                <option value="mainnet" {% if trade_mode == 'mainnet' %}selected{% endif %}>Live (Mainnet)</option>
+            </select><br><br>
+
+            <label for="risk_per_trade">Risk per Trade (%):</label>
+            <input type="number" id="risk_per_trade" name="risk_per_trade" step="0.01" value="{{ risk_per_trade }}" required><br><br>
+
+            <label>Take Profit Levels:</label><br>
+            TP1: <input type="number" name="tp1" step="0.01" value="{{ tp1 }}" required>
+            TP2: <input type="number" name="tp2" step="0.01" value="{{ tp2 }}" required>
+            TP3: <input type="number" name="tp3" step="0.01" value="{{ tp3 }}" required>
+            TP4: <input type="number" name="tp4" step="0.01" value="{{ tp4 }}" required><br><br>
+
+            <label for="stop_loss">Stop Loss:</label>
+            <input type="number" id="stop_loss" name="stop_loss" step="0.01" value="{{ stop_loss }}" required><br><br>
+
+            <label for="leverage">Leverage:</label>
+            <input type="number" id="leverage" name="leverage" step="1" value="{{ leverage }}" required><br><br>
+
+            <button type="submit">Update Configuration</button>
+        </form>
+    </section>
+
+    <section>
+      <h2>Open Positions</h2>
+      <ul>
+          {% for position in open_positions %}
+              <li>{{ position.symbol }} - {{ position.side }} - Size: {{ position.size }} - Entry: {{ position.entryPrice }}</li>
+          {% else %}
+              <li>No open positions.</li>
+          {% endfor %}
+      </ul>
+    </section>
+
+    <section>
+        <h2>Trade History</h2>
+        <select id="history_symbol">
+            <option value="BTCUSDT">BTCUSDT</option>
+            <option value="ETHUSDT">ETHUSDT</option>
+        </select>
+        <button onclick="loadTradeHistory()">Load History</button>
+
+        <table id="trade_history_table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>PnL</th>
+                    <th>Open Time</th>
+                    <th>Close Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Trade history will be loaded here -->
+            </tbody>
+        </table>
+    </section>
+    <section>
+        <h2>Kill Switch</h2>
+        <button onclick="activateKillSwitch()" style = "background-color: red; color: white;">Activate Kill Switch</button>
+        <p id="kill_switch_message"></p>
+    </section>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

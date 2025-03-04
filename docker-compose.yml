@@ -1,0 +1,36 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"  # Dashboard
+      - "9000:9000"  # Webhooks (optional)
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://tradingbot:tradingbotpassword@db:5432/tradingdb
+      - TRADE_MODE=${TRADE_MODE}
+      - BYBIT_MAINNET_API_KEY=${BYBIT_MAINNET_API_KEY}
+      - BYBIT_MAINNET_SECRET_KEY=${BYBIT_MAINNET_SECRET_KEY}
+      - BYBIT_TESTNET_API_KEY=${BYBIT_TESTNET_API_KEY}
+      - BYBIT_TESTNET_SECRET_KEY=${BYBIT_TESTNET_SECRET_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - BYBIT_MAINNET_REST_URL=${BYBIT_MAINNET_REST_URL}
+      - BYBIT_MAINNET_WS_URL=${BYBIT_MAINNET_WS_URL}
+      - BYBIT_TESTNET_REST_URL=${BYBIT_TESTNET_REST_URL}
+      - BYBIT_TESTNET_WS_URL=${BYBIT_TESTNET_WS_URL}
+
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: tradingbot
+      POSTGRES_PASSWORD: tradingbotpassword
+      POSTGRES_DB: tradingdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
