@@ -248,3 +248,83 @@ async def kill_switch_route(db: Session = Depends(get_db)):
     update_bot_config(db, {'trade_mode': 'testnet'})
     await send_telegram_message("🚨 Kill Switch Activated via Web Dashboard! 🚨\nTrading is now in Demo Mode.")
     return {"message": "Kill Switch Activated"}
+
+@app.get("/api/performance_metrics")
+async def get_performance_metrics(db: Session = Depends(get_db)):
+    """獲取交易績效指標"""
+    try:
+        closed_trades = get_closed_trades(db)
+        
+        if not closed_trades:
+            return {
+                "total_trades": 0,
+                "win_rate": 0,
+                "avg_profit": 0,
+                "max_drawdown": 0,
+                "profit_factor": 0
+            }
+        
+        # 計算基本指標
+        total_trades = len(closed_trades)
+        winning_trades = len([t for t in closed_trades if t.pnl > 0])
+        win_rate = (winning_trades / total_trades) * 100
+        
+        # 計算平均利潤
+        total_profit = sum([t.pnl for t in closed_trades if t.pnl > 0])
+        total_loss = abs(sum([t.pnl for t in closed_trades if t.pnl < 0]))
+        avg_profit = sum([t.pnl for t in closed_trades]) / total_trades
+        
+        # 計算最大回撤
+        cumulative_pnl = []
+        current_pnl = 0
+        for trade in closed_trades:
+            current_pnl += trade.pnl
+            cumulative_pnl.append(current_pnl)
+        
+        max_drawdown = 0
+        peak = cumulative_pnl[0]
+        for pnl in cumulative_pnl:
+            if pnl > peak:
+                peak = pnl
+            drawdown = peak - pnl
+            max_drawdown = max(max_drawdown, drawdown)
+        
+        # 計算利潤因子
+        profit_factor = total_profit / total_loss if total_loss > 0 else float('inf')
+        
+        return {
+            "total_trades": total_trades,
+            "win_rate": round(win_rate, 2),
+            "avg_profit": round(avg_profit, 2),
+            "max_drawdown": round(max_drawdown, 2),
+            "profit_factor": round(profit_factor, 2)
+        }
+        
+    except Exception as e:
+        logger.exception("Error calculating performance metrics")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/risk_metrics")
+async def get_risk_metrics(db: Session = Depends(get_db)):
+    """獲取風險指標"""
+    try:
+        open_trades = get_open_trades(db)
+        account_details = get_account_details()
+        
+        total_exposure = sum([
+            float(position['size']) * float(position['entryPrice']) 
+            for position in account_details[1] or []
+        ])
+        
+        account_balance = float(account_details[0].get('USDT', 0))
+        
+        return {
+            "total_exposure": round(total_exposure, 2),
+            "exposure_ratio": round((total_exposure / account_balance * 100), 2) if account_balance > 0 else 0,
+            "open_positions": len(open_trades),
+            "available_margin": round(account_balance, 2)
+        }
+        
+    except Exception as e:
+        logger.exception("Error calculating risk metrics")
+        raise HTTPException(status_code=500, detail=str(e))
