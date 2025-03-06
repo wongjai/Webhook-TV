@@ -1,0 +1,11 @@
+Node.js 方案優點：
+- 非阻塞 I/O 適合處理多個並發請求
+- Express 框架簡化 Webhook 實現
+- npm 生態系統中有現成的 Bybit API 客戶端
+
+Python 方案優點：
+- 數據處理和分析能力強
+- 簡潔的語法適合快速開發
+- 有成熟的 Bybit API 庫
+
+考慮到 Webhook 服務的特性，Node.js 可能更適合作為主要實現技術。 
