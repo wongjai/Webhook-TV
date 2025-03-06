@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const crypto = require('crypto');
 const { createLogger, format, transports } = require('winston');
 const { bybitAPI } = require('./bybit');
+const { TRADE_COMMANDS } = require('./constants');
 
 // 載入環境變數
 dotenv.config();
@@ -52,29 +53,100 @@ app.post('/webhook', authenticateWebhook, async (req, res) => {
   try {
     logger.info('Received webhook', { payload: req.body });
     
-    const { symbol, side, quantity, price, stopLoss, takeProfit } = req.body;
-    
-    // 驗證必要參數
-    if (!symbol || !side || !quantity) {
-      logger.error('Missing required parameters');
-      return res.status(400).send('Missing required parameters');
-    }
-    
-    // 執行交易
-    const orderResult = await bybitAPI.createOrder({
+    const { 
+      command,
       symbol,
-      side,
       quantity,
       price,
       stopLoss,
-      takeProfit
-    });
+      takeProfit,
+      tpPercentage // 用於部分止盈
+    } = req.body;
     
-    logger.info('Order placed successfully', { order: orderResult });
+    // 驗證必要參數
+    if (!command || !symbol) {
+      logger.error('Missing required parameters');
+      return res.status(400).send('Missing required parameters');
+    }
+
+    let orderResult;
+    
+    switch (command) {
+      case TRADE_COMMANDS.OPEN_LONG:
+        orderResult = await bybitAPI.createOrder({
+          symbol,
+          side: 'BUY',
+          quantity,
+          price,
+          stopLoss,
+          takeProfit
+        });
+        break;
+
+      case TRADE_COMMANDS.OPEN_SHORT:
+        orderResult = await bybitAPI.createOrder({
+          symbol,
+          side: 'SELL',
+          quantity,
+          price,
+          stopLoss,
+          takeProfit
+        });
+        break;
+
+      case TRADE_COMMANDS.LONG_TP_1:
+      case TRADE_COMMANDS.LONG_TP_2:
+      case TRADE_COMMANDS.LONG_TP_3:
+      case TRADE_COMMANDS.LONG_TP_4:
+        orderResult = await bybitAPI.partialClosePosition({
+          symbol,
+          side: 'SELL',
+          closePercentage: tpPercentage,
+          price
+        });
+        break;
+
+      case TRADE_COMMANDS.SHORT_TP_1:
+      case TRADE_COMMANDS.SHORT_TP_2:
+      case TRADE_COMMANDS.SHORT_TP_3:
+      case TRADE_COMMANDS.SHORT_TP_4:
+        orderResult = await bybitAPI.partialClosePosition({
+          symbol,
+          side: 'BUY',
+          closePercentage: tpPercentage,
+          price
+        });
+        break;
+
+      case TRADE_COMMANDS.CLOSE_LONG:
+        orderResult = await bybitAPI.closePosition({
+          symbol,
+          side: 'SELL',
+          price
+        });
+        break;
+
+      case TRADE_COMMANDS.CLOSE_SHORT:
+        orderResult = await bybitAPI.closePosition({
+          symbol,
+          side: 'BUY',
+          price
+        });
+        break;
+
+      default:
+        logger.error('Invalid command');
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid command'
+        });
+    }
+    
+    logger.info('Order executed successfully', { order: orderResult });
     
     return res.status(200).json({
       success: true,
-      message: 'Order placed successfully',
+      message: 'Order executed successfully',
       data: orderResult
     });
   } catch (error) {
